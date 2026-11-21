@@ -1,0 +1,32 @@
+<Application x:Class="PcAnalyzer.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:PcAnalyzer.App.Converters"
+             xmlns:vm="clr-namespace:PcAnalyzer.App.ViewModels"
+             xmlns:views="clr-namespace:PcAnalyzer.App.Views"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Colors.xaml"/>
+                <ResourceDictionary Source="Themes/Icons.xaml"/>
+                <ResourceDictionary Source="Themes/Controls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <conv:BoolToVisibility x:Key="Visible"/>
+            <conv:BoolToVisibility x:Key="Hidden" Invert="True"/>
+            <conv:InverseBool x:Key="Not"/>
+            <conv:SeverityToBrush x:Key="SeverityBrush"/>
+            <conv:VerdictToBrush x:Key="VerdictBrush"/>
+            <conv:EnumEquals x:Key="EnumEquals"/>
+            <conv:SourceToBrush x:Key="SourceBrush"/>
+
+            <DataTemplate DataType="{x:Type vm:DashboardViewModel}"><views:DashboardView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SessionViewModel}"><views:SessionView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:AnalysisViewModel}"><views:AnalysisView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:HistoryViewModel}"><views:HistoryView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:MyPcViewModel}"><views:MyPcView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><views:SettingsView/></DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

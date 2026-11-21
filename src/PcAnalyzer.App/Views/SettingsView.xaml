@@ -1,0 +1,219 @@
+<UserControl x:Class="PcAnalyzer.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:PcAnalyzer.App.Controls">
+    <UserControl.Resources>
+        <Style x:Key="Section" TargetType="TextBlock" BasedOn="{StaticResource H3}">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="Margin" Value="0,0,0,18"/>
+        </Style>
+        <Style x:Key="Label" TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+        <Style x:Key="Field" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,0,0,18"/>
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="40,0,40,110">
+                <TextBlock Text="Настройки" FontSize="16" FontWeight="Medium" Margin="0,0,0,40"/>
+                <TextBlock Text="Настройки" Style="{StaticResource H1}" Margin="0,0,0,28"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Margin="0,0,10,0">
+                        <!-- Recording -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="Запись игровых сессий" Style="{StaticResource Section}"/>
+                                <Border Background="{StaticResource RaisedBrush}" CornerRadius="12" HorizontalAlignment="Left" Margin="0,0,0,10">
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Style="{StaticResource Segment}" Content="Автоматический" GroupName="mode"
+                                                     IsChecked="{Binding DetectionMode, Converter={StaticResource EnumEquals}, ConverterParameter=Auto}"/>
+                                        <RadioButton Style="{StaticResource Segment}" Content="Гибридный" GroupName="mode"
+                                                     IsChecked="{Binding DetectionMode, Converter={StaticResource EnumEquals}, ConverterParameter=Hybrid}"/>
+                                        <RadioButton Style="{StaticResource Segment}" Content="Ручной" GroupName="mode"
+                                                     IsChecked="{Binding DetectionMode, Converter={StaticResource EnumEquals}, ConverterParameter=Manual}"/>
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,18"
+                                           Text="Автоматический — запись сама начинается и заканчивается. Гибридный — автоматически плюс ручное управление. Ручной — только по кнопке."/>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Не сохранять автосессии короче, секунд" Style="{StaticResource Label}"/>
+                                    <TextBox Text="{Binding MinAutoSeconds}" Width="120" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Мои игры — всегда считать игрой (имя exe, по одному в строке)" Style="{StaticResource Label}"/>
+                                    <TextBox Text="{Binding UserGames}" AcceptsReturn="True" Height="80" VerticalContentAlignment="Top" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource Field}" Margin="0">
+                                    <TextBlock Text="Исключения — никогда не считать игрой" Style="{StaticResource Label}"/>
+                                    <TextBox Text="{Binding ExcludedApps}" AcceptsReturn="True" Height="80" VerticalContentAlignment="Top" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- FPS source -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="Источник FPS и времени кадра" Style="{StaticResource Section}"/>
+                                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding UsePresentMon}" Content="Использовать PresentMon" Margin="0,0,0,14"/>
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,12">
+                                    PresentMon — бесплатная утилита Intel с открытым кодом (лицензия MIT), читает стандартные события Windows о выводе кадров и работает с видеокартами NVIDIA, AMD и Intel.
+                                    Приложение не скачивает её само: загрузите консольную версию с официальной страницы и укажите путь.
+                                    Для записи кадров нужны права администратора (или группа «Пользователи журналов производительности»).
+                                </TextBlock>
+                                <Button Content="Открыть страницу загрузки PresentMon (GitHub)" Style="{StaticResource Ghost}" HorizontalAlignment="Left" Margin="0,0,0,14"
+                                        Command="{Binding OpenPresentMonPageCommand}"/>
+                                <TextBlock Text="Путь к PresentMon" Style="{StaticResource Label}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding PresentMonPath, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <Button Grid.Column="1" Content="Обзор…" Margin="10,0,0,0" Command="{Binding BrowsePresentMonCommand}"/>
+                                </Grid>
+                                <TextBlock Text="{Binding FrameSourceStatus, StringFormat=Состояние: {0}}" Style="{StaticResource Muted}" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- AI -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Интеллектуальный анализ" Style="{StaticResource Section}"/>
+                                <TextBlock Style="{StaticResource Body}" Text="Используется локальный анализ: правила диагностики и генерация объяснений работают без интернета и подписок. Каждый вывод строится только на записанных данных."/>
+                                <CheckBox Style="{StaticResource Switch}" Content="Внешний AI API — не реализовано (запланировано)" IsEnabled="False" Margin="0,16,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                        <!-- Monitoring -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="Мониторинг" Style="{StaticResource Section}"/>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Частота опроса" Style="{StaticResource Label}"/>
+                                    <ComboBox ItemsSource="{Binding Intervals}" SelectedItem="{Binding Interval}" DisplayMemberPath="Text"/>
+                                </StackPanel>
+                                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding PowerSaving}" Margin="0,0,0,8"
+                                          Content="Режим энергосбережения мониторинга"/>
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,18" Text="Вне записи опрос раз в 2 с и реже сканирование процессов. Во время записи — всегда выбранная частота."/>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="Окно live-графиков, минут" Style="{StaticResource Label}"/>
+                                    <ComboBox ItemsSource="{Binding ChartWindows}" SelectedItem="{Binding ChartMinutes}" Width="120" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding ChartSmoothing}" Content="Сглаживать линии графиков"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Thresholds -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="Пороги диагностики" Style="{StaticResource Section}"/>
+                                <UniformGrid Columns="2">
+                                    <StackPanel Style="{StaticResource Field}" Margin="0,0,10,18">
+                                        <TextBlock Text="Перегрев CPU, °C" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding CpuTempWarn}"/>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}" Margin="10,0,0,18">
+                                        <TextBlock Text="Перегрев GPU, °C" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding GpuTempWarn}"/>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}" Margin="0,0,10,18">
+                                        <TextBlock Text="Просадка FPS, %" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding FpsDropPercent}"/>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}" Margin="10,0,0,18">
+                                        <TextBlock Text="Фриз от, мс" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding FreezeMs}"/>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}" Margin="0,0,10,0">
+                                        <TextBlock Text="VRAM заполнена от, %" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding VramFull}"/>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}" Margin="10,0,0,0">
+                                        <TextBlock Text="RAM заполнена от, %" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding RamFull}"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,14,0,0" Text="После изменения порогов прошлые сессии можно пересчитать кнопкой «Повторить анализ»."/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- System -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="Система и уведомления" Style="{StaticResource Section}"/>
+                                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding StartWithWindows}" Content="Запускать вместе с Windows" Margin="0,0,0,14"/>
+                                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding StartMinimized}" Content="Запускаться свёрнутым в трей" Margin="0,0,0,14"/>
+                                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MinimizeToTray}" Content="Сворачивать в трей" Margin="0,0,0,14"/>
+                                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding CloseToTray}" Content="Кнопка закрытия сворачивает в трей" Margin="0,0,0,14"/>
+                                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Notifications}" Content="Уведомления о проблемах и готовых отчётах" Margin="0,0,0,18"/>
+                                <Border CornerRadius="14" Background="#14FFB547" Padding="14" Visibility="{Binding IsElevated, Converter={StaticResource Hidden}}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Muted}" Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Text="Сейчас без прав администратора: температура CPU и FPS через PresentMon недоступны. Права нужны только для чтения сенсоров и событий вывода кадров."/>
+                                        <Button Content="Перезапустить от администратора" HorizontalAlignment="Left" Margin="0,12,0,0" Command="{Binding RestartElevatedCommand}"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Storage -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Хранение и экспорт" Style="{StaticResource Section}"/>
+                                <UniformGrid Columns="3">
+                                    <StackPanel Style="{StaticResource Field}" Margin="0,0,10,18">
+                                        <TextBlock Text="Хранить сессии, дней (0 = всегда)" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding HistoryDays}"/>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}" Margin="5,0,5,18">
+                                        <TextBlock Text="Сырые данные, дней" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding RawDays}"/>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource Field}" Margin="10,0,0,18">
+                                        <TextBlock Text="Лимит базы, МБ" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding MaxDbMb}"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,12" Text="Отчёты и итоги сессий сохраняются; по сроку удаляются только посекундная телеметрия и время кадров."/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                                    <TextBlock Text="{Binding DbSize, StringFormat=Размер базы: {0}}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <Button Content="Очистить сейчас" Style="{StaticResource Ghost}" Margin="0,0,10,0" Command="{Binding CleanupCommand}"/>
+                                    <Button Content="Папка данных" Style="{StaticResource Ghost}" Command="{Binding OpenDataFolderCommand}"/>
+                                </StackPanel>
+                                <TextBlock Text="Папка экспорта отчётов" Style="{StaticResource Label}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding ExportFolder, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" ToolTip="{Binding DefaultExportFolder, StringFormat=По умолчанию: {0}}"/>
+                                    <Button Grid.Column="1" Content="Обзор…" Margin="10,0,0,0" Command="{Binding BrowseExportCommand}"/>
+                                </Grid>
+                                <TextBlock Text="{Binding DefaultExportFolder, StringFormat=Если не указано: {0}}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                                <TextBlock Text="Экспорт: HTML-отчёт с графиками (им можно поделиться и распечатать в PDF из браузера) и CSV. Нативный PDF — запланирован." Style="{StaticResource Muted}" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Sticky save bar -->
+        <Border VerticalAlignment="Bottom" Margin="40,0,40,20" CornerRadius="18" Background="#E6101116" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1" Padding="20,12">
+            <Grid>
+                <TextBlock Text="{Binding StatusMessage, TargetNullValue='Изменения применяются после сохранения'}" Style="{StaticResource Muted}" VerticalAlignment="Center"/>
+                <Button Content="Сохранить настройки" Style="{StaticResource Primary}" HorizontalAlignment="Right" Command="{Binding SaveCommand}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
