@@ -139,6 +139,8 @@ public partial class App : Application
         sc.AddSingleton<ExportService>();
         sc.AddSingleton<TrayService>();
         sc.AddSingleton<UpdateService>();
+        sc.AddSingleton<WindowsTweaks>();
+        sc.AddSingleton<OptimizeViewModel>();
 
         sc.AddSingleton<LiveMonitor>();
         sc.AddSingleton<DashboardViewModel>();

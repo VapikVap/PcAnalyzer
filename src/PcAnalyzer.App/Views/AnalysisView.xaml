@@ -164,6 +164,23 @@
                                         <TextBlock Margin="0,10,0,0" Style="{StaticResource Muted}" Visibility="{Binding HasWhen, Converter={StaticResource Visible}}">
                                             <Run Text="Когда: " Foreground="{StaticResource TextSecondaryBrush}"/><Run Text="{Binding When, Mode=OneWay}"/>
                                         </TextBlock>
+                                        <!-- Do it from here -->
+                                        <ItemsControl ItemsSource="{Binding Actions}" Margin="0,14,0,0" Visibility="{Binding HasActions, Converter={StaticResource Visible}}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button x:Name="btn" Style="{StaticResource Ghost}" Content="{Binding Label}" Command="{Binding Command}"
+                                                            ToolTip="{Binding ToolTip}" Margin="0,0,8,8" Padding="14,8"/>
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPrimary}" Value="True">
+                                                            <Setter TargetName="btn" Property="Style" Value="{StaticResource Primary}"/>
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                         <Expander Margin="0,12,0,0" Foreground="{StaticResource AccentLightBrush}" Header="Доказательства и что сделать">
                                             <Expander.Template>
                                                 <ControlTemplate TargetType="Expander">

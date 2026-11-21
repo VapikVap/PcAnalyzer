@@ -17,6 +17,8 @@ public sealed class Finding
     public List<string> Evidence { get; set; } = new();
     public string Impact { get; set; } = "";
     public List<string> Recommendations { get; set; } = new();
+    /// <summary>Things the finding is about that the UI can act on (e.g. process names for "background").</summary>
+    public List<string> Subjects { get; set; } = new();
     /// <summary>Share of the session the condition was present (0–1), if meaningful.</summary>
     public double? Share { get; set; }
 }

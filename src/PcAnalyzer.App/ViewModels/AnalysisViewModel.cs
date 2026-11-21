@@ -48,11 +48,14 @@ public sealed partial class AnalysisViewModel : PageViewModel
     public ChartSeries[] LoadChart => new[] { GpuSeries, CpuSeries, CoreSeries };
     public ChartSeries[] TempChart => new[] { GpuTempSeries, CpuTempSeries };
 
-    public AnalysisViewModel(ISessionStore store, SessionRecorder recorder, ExportService export)
+    private readonly WindowsTweaks _tweaks;
+
+    public AnalysisViewModel(ISessionStore store, SessionRecorder recorder, ExportService export, WindowsTweaks tweaks)
     {
         _store = store;
         _recorder = recorder;
         _export = export;
+        _tweaks = tweaks;
         recorder.SessionCompleted += (_, s) => System.Windows.Application.Current.Dispatcher.BeginInvoke(() => RequestedSessionId ??= s.Id);
     }
 
@@ -98,7 +101,7 @@ public sealed partial class AnalysisViewModel : PageViewModel
         HeadlineBrush = (Brush)new Converters.SeverityToBrush().Convert(s.Summary?.WorstSeverity ?? Severity.None, typeof(Brush), null!, null!);
 
         Findings.Clear();
-        foreach (var f in s.Report?.Findings ?? new()) Findings.Add(new FindingVm(f));
+        foreach (var f in s.Report?.Findings ?? new()) Findings.Add(new FindingVm(f, BuildActions(f)));
         Recommendations.Clear();
         foreach (var r in s.Report?.Recommendations ?? new()) Recommendations.Add(r);
         Events.Clear();
@@ -153,6 +156,111 @@ public sealed partial class AnalysisViewModel : PageViewModel
         await LoadAsync(Session.Id);
         ShowStatus("Анализ выполнен заново с текущими порогами");
     }
+
+    // ---------------- "Сделать" buttons for findings ----------------
+
+    private List<FindingAction> BuildActions(Finding f)
+    {
+        var list = new List<FindingAction>();
+        FindingAction Open(string label, string target) => new(label, false, () => { Try(() => WindowsTweaks.Open(target)); return Task.CompletedTask; });
+        FindingAction GoOptimize() => new("Проверить настройки Windows", false, () => { Navigator?.Navigate(Page.Optimize); return Task.CompletedTask; });
+        void AddPowerPlanFix()
+        {
+            if (!SafeIsPowerSaver()) return;
+            list.Add(new FindingAction("Включить «Сбалансированный» план", true, () =>
+            {
+                if (Try(() => _tweaks.Apply(WindowsTweaks.PowerPlan)))
+                    ShowStatus("План электропитания переключён на «Сбалансированный». Вернуть можно на странице «Оптимизация».");
+                return Task.CompletedTask;
+            }));
+        }
+
+        switch (f.Code)
+        {
+            case "background":
+                var running = ProcessCloser.RunningClosable(BackgroundNames(f));
+                if (running.Count > 0)
+                    list.Add(new FindingAction("Закрыть: " + string.Join(", ", running), true, () => CloseProcessesAsync(running),
+                        "Программы получат обычный запрос на закрытие; не ответившие за 4 с будут завершены"));
+                list.Add(Open("Автозагрузка", "ms-settings:startupapps"));
+                break;
+            case "power_saver_plan":
+                AddPowerPlanFix();
+                list.Add(Open("Параметры питания", "ms-settings:powersleep"));
+                break;
+            case "cpu_clock_low":
+            case "cpu_clock_unstable":
+                AddPowerPlanFix();
+                list.Add(Open("Параметры питания", "ms-settings:powersleep"));
+                break;
+            case "ram":
+                list.Add(new FindingAction("Освободить память", true, FreeMemoryAsync,
+                    "Показать программы, которые сейчас занимают больше всего памяти, и закрыть выбранные"));
+                list.Add(Open("Автозагрузка", "ms-settings:startupapps"));
+                list.Add(GoOptimize());
+                break;
+            case "disk":
+                list.Add(Open("Освободить место", "ms-settings:storagesense"));
+                list.Add(GoOptimize());
+                break;
+            case "vram":
+                list.Add(Open("Параметры графики Windows", "ms-settings:display-advancedgraphics"));
+                break;
+            case "stutter":
+            case "degradation":
+            case "gpu_drop_cpu_peak":
+            case "cpu_saturated":
+                list.Add(GoOptimize());
+                break;
+        }
+        return list;
+    }
+
+    /// <summary>Process names from the finding; older reports only have them in the evidence lines ("name: в среднем …").</summary>
+    private static IEnumerable<string> BackgroundNames(Finding f) =>
+        f.Subjects.Count > 0 ? f.Subjects
+            : f.Evidence.Select(e => e.Split(':')[0].Trim()).Where(n => n.Length > 0 && !n.Contains(' '));
+
+    private async Task FreeMemoryAsync()
+    {
+        var top = await Task.Run(() => ProcessCloser.TopMemory(5));
+        if (top.Count == 0) { ShowStatus("Сейчас нет программ, занимающих много памяти (больше 300 МБ)."); return; }
+        var lines = string.Join("\n", top.Select(t => $"•  {t.Name} — {t.Mb / 1024:0.0} ГБ"));
+        var answer = System.Windows.MessageBox.Show(
+            $"Больше всего памяти сейчас занимают:\n\n{lines}\n\nЗакрыть их? Несохранённые данные в них могут быть потеряны.\n" +
+            "Если какая-то из них нужна — нажмите «Нет» и закройте лишние вручную.",
+            "Освободить память", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+        if (answer != System.Windows.MessageBoxResult.Yes) return;
+        await CloseConfirmedAsync(top.Select(t => t.Name).ToList());
+    }
+
+    private async Task CloseProcessesAsync(List<string> names)
+    {
+        var answer = System.Windows.MessageBox.Show(
+            $"Закрыть программы: {string.Join(", ", names)}?\n\nНесохранённые данные в них могут быть потеряны.",
+            "Закрыть фоновые программы", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+        if (answer != System.Windows.MessageBoxResult.Yes) return;
+        await CloseConfirmedAsync(names);
+    }
+
+    private async Task CloseConfirmedAsync(List<string> names)
+    {
+        var r = await ProcessCloser.CloseAsync(names);
+        ShowStatus((r.Closed.Count > 0 ? "Закрыто: " + string.Join(", ", r.Closed) + ". " : "") +
+                   (r.Failed.Count > 0 ? "Не удалось закрыть: " + string.Join(", ", r.Failed) + " (возможно, нужны права администратора)." : ""));
+        if (Session != null) await LoadAsync(Session.Id); // refresh buttons
+    }
+
+    private bool SafeIsPowerSaver()
+    {
+        try { return _tweaks.IsPowerSaverActive; } catch { return false; }
+    }
+
+    private bool Try(Action a)
+    {
+        try { a(); return true; }
+        catch (Exception ex) { ShowStatus("Не получилось: " + ex.Message); return false; }
+    }
 }
 
 public sealed class SessionPick(GameSession s)
@@ -162,9 +270,12 @@ public sealed class SessionPick(GameSession s)
     public override string ToString() => Text;
 }
 
-public sealed class FindingVm(Finding f)
+public sealed class FindingVm(Finding f, IReadOnlyList<FindingAction> actions)
 {
     public Finding F { get; } = f;
+    /// <summary>Buttons that carry out the recommendations right from the report.</summary>
+    public IReadOnlyList<FindingAction> Actions { get; } = actions;
+    public bool HasActions => Actions.Count > 0;
     public string Title => F.Title;
     public string Description => F.Description;
     public Severity Severity => F.Severity;
@@ -175,6 +286,14 @@ public sealed class FindingVm(Finding f)
     public IReadOnlyList<string> Evidence => F.Evidence;
     public string Impact => F.Impact;
     public IReadOnlyList<string> Recommendations => F.Recommendations;
+}
+
+public sealed class FindingAction(string label, bool primary, Func<Task> run, string? tooltip = null)
+{
+    public string Label { get; } = label;
+    public bool IsPrimary { get; } = primary;
+    public string? ToolTip { get; } = tooltip;
+    public IAsyncRelayCommand Command { get; } = new AsyncRelayCommand(run);
 }
 
 public sealed class EventVm(PerformanceEvent e)

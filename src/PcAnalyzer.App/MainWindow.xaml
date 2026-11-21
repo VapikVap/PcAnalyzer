@@ -56,6 +56,8 @@
                                      IsChecked="{Binding CurrentPage, Converter={StaticResource EnumEquals}, ConverterParameter=History}"/>
                         <RadioButton Style="{StaticResource NavItem}" Tag="{StaticResource IconPc}" Content="Мой ПК"
                                      IsChecked="{Binding CurrentPage, Converter={StaticResource EnumEquals}, ConverterParameter=MyPc}"/>
+                        <RadioButton Style="{StaticResource NavItem}" Tag="{StaticResource IconBolt}" Content="Оптимизация"
+                                     IsChecked="{Binding CurrentPage, Converter={StaticResource EnumEquals}, ConverterParameter=Optimize}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Row="2">
@@ -117,6 +119,14 @@
                                              IsChecked="{Binding CurrentPage, Converter={StaticResource EnumEquals}, ConverterParameter=Settings}"/>
                             </StackPanel>
                         </Border>
+                        <!-- App version + manual update check -->
+                        <TextBlock Margin="14,12,0,0" FontSize="12" Foreground="{StaticResource MutedBrush}">
+                            <Run Text="{Binding VersionShort, Mode=OneWay}"/>
+                            <Run Text="·"/>
+                            <Hyperlink Command="{Binding CheckUpdatesNowCommand}" Foreground="{StaticResource MutedBrush}" TextDecorations="None"
+                                       ToolTip="Проверить, есть ли новая версия на GitHub"><Run Text="проверить обновления"/></Hyperlink>
+                            <Run Text="{Binding VersionHint, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        </TextBlock>
                     </StackPanel>
                 </Grid>
             </Border>

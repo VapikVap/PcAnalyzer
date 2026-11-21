@@ -8,7 +8,7 @@ using PcAnalyzer.Core.Services;
 
 namespace PcAnalyzer.App.ViewModels;
 
-public enum Page { Dashboard, Session, Analysis, History, MyPc, Settings }
+public enum Page { Dashboard, Session, Analysis, History, MyPc, Optimize, Settings }
 
 public interface INavigator
 {
@@ -26,6 +26,7 @@ public sealed partial class MainViewModel : ObservableObject, INavigator
     public AnalysisViewModel Analysis { get; }
     public HistoryViewModel History { get; }
     public MyPcViewModel MyPc { get; }
+    public OptimizeViewModel Optimize { get; }
     public SettingsViewModel Settings { get; }
     public ITelemetryService Telemetry { get; }
 
@@ -43,11 +44,15 @@ public sealed partial class MainViewModel : ObservableObject, INavigator
     [ObservableProperty] private double _updateProgress;
     [ObservableProperty] private string _updateStatus = "";
     public string CurrentVersionText => "Версия " + UpdateService.CurrentVersion;
+    public string VersionShort => "v" + UpdateService.CurrentVersion;
+    /// <summary>Result of a manual check shown next to the version ("актуальная версия" / "нет связи").</summary>
+    [ObservableProperty] private string _versionHint = "";
+    [ObservableProperty] private bool _isChecking;
 
     public MainViewModel(DashboardViewModel dashboard, SessionViewModel session, AnalysisViewModel analysis, HistoryViewModel history,
-        MyPcViewModel myPc, SettingsViewModel settings, SessionRecorder recorder, ITelemetryService telemetry, UpdateService updates)
+        MyPcViewModel myPc, OptimizeViewModel optimize, SettingsViewModel settings, SessionRecorder recorder, ITelemetryService telemetry, UpdateService updates)
     {
-        Dashboard = dashboard; Session = session; Analysis = analysis; History = history; MyPc = myPc; Settings = settings;
+        Dashboard = dashboard; Session = session; Analysis = analysis; History = history; MyPc = myPc; Optimize = optimize; Settings = settings;
         Telemetry = telemetry;
         _recorder = recorder;
         _updates = updates;
@@ -56,16 +61,10 @@ public sealed partial class MainViewModel : ObservableObject, INavigator
         _updateTimer.Tick += async (_, _) =>
         {
             _updateTimer.Interval = TimeSpan.FromHours(6);
-            if (IsUpdating) return;
-            try
-            {
-                var found = await _updates.CheckAsync();
-                if (found != null) { AvailableUpdate = found; UpdateStatus = $"Доступна версия {found.Version}"; }
-            }
-            catch (Exception) { /* an update check must never disturb the app; CheckAsync logs network errors */ }
+            await CheckForUpdatesAsync(manual: false);
         };
         _updateTimer.Start();
-        foreach (var vm in new INavigationAware[] { dashboard, session, analysis, history, myPc, settings }) vm.Navigator = this;
+        foreach (var vm in new INavigationAware[] { dashboard, session, analysis, history, myPc, optimize, settings }) vm.Navigator = this;
 
         CurrentView = Dashboard;
         recorder.StateChanged += (_, _) => Application.Current.Dispatcher.BeginInvoke(UpdateRecording);
@@ -89,6 +88,7 @@ public sealed partial class MainViewModel : ObservableObject, INavigator
             Page.Analysis => Analysis,
             Page.History => History,
             Page.MyPc => MyPc,
+            Page.Optimize => Optimize,
             Page.Settings => Settings,
             _ => Dashboard,
         };
@@ -108,6 +108,24 @@ public sealed partial class MainViewModel : ObservableObject, INavigator
     {
         Analysis.RequestedSessionId = sessionId;
         Navigate(Page.Analysis);
+    }
+
+    [RelayCommand]
+    private Task CheckUpdatesNow() => CheckForUpdatesAsync(manual: true);
+
+    private async Task CheckForUpdatesAsync(bool manual)
+    {
+        if (IsUpdating || IsChecking) return;
+        IsChecking = true;
+        if (manual) VersionHint = "проверка…";
+        try
+        {
+            var (found, reachable) = await _updates.CheckWithStatusAsync();
+            if (found != null) { AvailableUpdate = found; UpdateStatus = $"Доступна версия {found.Version}"; VersionHint = ""; }
+            else if (manual) VersionHint = reachable ? "актуальная версия" : "нет связи с GitHub";
+        }
+        catch (Exception) { if (manual) VersionHint = "нет связи с GitHub"; /* never disturb the app */ }
+        finally { IsChecking = false; }
     }
 
     private bool CanInstallUpdate() => !IsUpdating;

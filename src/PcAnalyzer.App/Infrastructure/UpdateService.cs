@@ -38,7 +38,10 @@ public sealed class UpdateService
     }
 
     /// <summary>Returns the newer release, or null when up to date / offline / no installer attached.</summary>
-    public async Task<UpdateInfo?> CheckAsync(CancellationToken ct = default)
+    public async Task<UpdateInfo?> CheckAsync(CancellationToken ct = default) => (await CheckWithStatusAsync(ct)).Update;
+
+    /// <summary>Like <see cref="CheckAsync"/>, plus whether GitHub answered at all (for a manual check).</summary>
+    public async Task<(UpdateInfo? Update, bool Reachable)> CheckWithStatusAsync(CancellationToken ct = default)
     {
         try
         {
@@ -47,18 +50,18 @@ public sealed class UpdateService
             {
                 // 404 = no releases yet; 403 = rate limit. Neither is worth bothering the user about.
                 _log.LogInformation("Update check: HTTP {Status}", (int)resp.StatusCode);
-                return null;
+                return (null, resp.StatusCode == System.Net.HttpStatusCode.NotFound);
             }
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
             var root = doc.RootElement;
-            if (root.TryGetProperty("draft", out var d) && d.GetBoolean()) return null;
-            if (root.TryGetProperty("prerelease", out var p) && p.GetBoolean()) return null;
+            if (root.TryGetProperty("draft", out var d) && d.GetBoolean()) return (null, true);
+            if (root.TryGetProperty("prerelease", out var p) && p.GetBoolean()) return (null, true);
 
             var tag = root.GetProperty("tag_name").GetString() ?? "";
             if (!TryParseTag(tag, out var version) || version <= CurrentVersion)
             {
                 _log.LogInformation("Update check: latest {Tag}, current {Current} — up to date", tag, CurrentVersion);
-                return null;
+                return (null, true);
             }
 
             foreach (var a in root.GetProperty("assets").EnumerateArray())
@@ -75,15 +78,15 @@ public sealed class UpdateService
                 var info = new UpdateInfo(version, tag, a.GetProperty("browser_download_url").GetString()!,
                     a.GetProperty("size").GetInt64(), sha, root.GetProperty("html_url").GetString() ?? ReleasesPage);
                 _log.LogInformation("Update available: {Tag} (current {Current})", tag, CurrentVersion);
-                return info;
+                return (info, true);
             }
             _log.LogWarning("Release {Tag} has no installer asset", tag);
-            return null;
+            return (null, true);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException or InvalidOperationException)
         {
             _log.LogInformation("Update check failed: {Message}", ex.Message);
-            return null;
+            return (null, false);
         }
     }
 

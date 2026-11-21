@@ -26,6 +26,7 @@
             <DataTemplate DataType="{x:Type vm:AnalysisViewModel}"><views:AnalysisView/></DataTemplate>
             <DataTemplate DataType="{x:Type vm:HistoryViewModel}"><views:HistoryView/></DataTemplate>
             <DataTemplate DataType="{x:Type vm:MyPcViewModel}"><views:MyPcView/></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:OptimizeViewModel}"><views:OptimizeView/></DataTemplate>
             <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><views:SettingsView/></DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

@@ -165,6 +165,7 @@ public sealed class BackgroundProcessRule : IAnalysisRule
             Description = $"Во время игры сторонние программы в сумме использовали около {F0(sum)}% процессора: {string.Join(", ", heavy.Select(h => h.name))}.",
             Impact = "Меньше ресурсов для игры, возможны микрофризы в моменты активности этих программ.",
         };
+        f.Subjects.AddRange(heavy.Select(h => h.name));
         foreach (var h in heavy)
             f.Evidence.Add($"{h.name}: в среднем {F1(h.avg)}% CPU" + (h.spikeAvg > 0 ? $", во время фризов {F1(h.spikeAvg)}%" : "") + $", до {F0(h.ram)} МБ RAM");
         f.Recommendations.Add($"Закрыть перед игрой: {string.Join(", ", heavy.Select(h => h.name))} (если это не нужно во время игры).");
