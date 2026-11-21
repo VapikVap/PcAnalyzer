@@ -57,8 +57,12 @@ public sealed partial class MainViewModel : ObservableObject, INavigator
         {
             _updateTimer.Interval = TimeSpan.FromHours(6);
             if (IsUpdating) return;
-            var found = await _updates.CheckAsync();
-            if (found != null) { AvailableUpdate = found; UpdateStatus = $"Доступна версия {found.Version}"; }
+            try
+            {
+                var found = await _updates.CheckAsync();
+                if (found != null) { AvailableUpdate = found; UpdateStatus = $"Доступна версия {found.Version}"; }
+            }
+            catch (Exception) { /* an update check must never disturb the app; CheckAsync logs network errors */ }
         };
         _updateTimer.Start();
         foreach (var vm in new INavigationAware[] { dashboard, session, analysis, history, myPc, settings }) vm.Navigator = this;

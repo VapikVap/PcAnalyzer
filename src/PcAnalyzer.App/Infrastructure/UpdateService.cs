@@ -20,13 +20,14 @@ public sealed class UpdateService
     public const string Repository = "VapikVap/PcAnalyzer";
     public static string ReleasesPage => $"https://github.com/{Repository}/releases";
 
+    // Must stay above Http: static initializers run in declaration order and CreateClient() reads it.
+    public static Version CurrentVersion { get; } = Normalize(
+        Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0));
+
     private static readonly HttpClient Http = CreateClient();
     private readonly ILogger _log;
 
     public UpdateService(ILogger<UpdateService> log) => _log = log;
-
-    public static Version CurrentVersion { get; } = Normalize(
-        Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0));
 
     private static HttpClient CreateClient()
     {
